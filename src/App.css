@@ -1619,3 +1619,630 @@ a:focus-visible {
     padding: 12px;
   }
 }
+
+/* DESTINATION FAVOURITES & SHORTLIST */
+
+.destination-card {
+  position: relative;
+}
+
+.destination-card-main {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.destination-card-main:active {
+  transform: scale(.99);
+}
+
+.destination-card-main .destination-info {
+  padding-bottom: 14px;
+}
+
+.destination-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.destination-action {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #f8faf7;
+  color: #819186;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.destination-action.active {
+  color: #477b53;
+  background: #edf5ec;
+  border-color: #cbdcc9;
+}
+
+.destination-action:active {
+  transform: scale(.92);
+}
+
+.favourite-active {
+  color: #477b53 !important;
+}
+
+.shortlist-button {
+  width: 100%;
+  min-height: 46px;
+  margin: 4px 0 20px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.shortlist-button.active {
+  background: #edf5ec;
+  border-color: #cbdcc9;
+  color: #477b53;
+}
+
+.shortlist-button:active {
+  transform: scale(.98);
+}
+
+
+/* =========================================
+   DARK MODE THEME
+========================================= */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --forest: #a4c5a8;
+  --green: #8fbd96;
+  --green-light: #304638;
+  --cream: #17221c;
+  --surface: #243129;
+  --text: #edf3ed;
+  --muted: #a1b0a3;
+  --border: #35453a;
+}
+
+/* Base backgrounds and text */
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #111a15;
+  color: var(--text);
+}
+
+html[data-theme="dark"] #root {
+  background: #111a15;
+}
+
+html[data-theme="dark"] .app-container,
+html[data-theme="dark"] .detail-page {
+  background: var(--cream);
+  color: var(--text);
+}
+
+/* Header */
+
+html[data-theme="dark"] .top-header h1,
+html[data-theme="dark"] .detail-content h1,
+html[data-theme="dark"] .section-heading h2,
+html[data-theme="dark"] .detail-section h2,
+html[data-theme="dark"] .itinerary-day-content h2 {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .top-header h1 span {
+  color: #9fc9a6;
+}
+
+html[data-theme="dark"] .profile-icon {
+  background: #354b3b;
+  color: #c5dfc8;
+}
+
+/* Theme toggle */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.theme-toggle:active {
+  transform: scale(.92);
+}
+
+html[data-theme="dark"] .theme-toggle {
+  background: #304237;
+  border-color: #46594b;
+  color: #f3d68b;
+}
+
+/* Sections and headings */
+
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .destination-category,
+html[data-theme="dark"] .food-location,
+html[data-theme="dark"] .itinerary-subtitle {
+  color: #a4b9a7;
+}
+
+/* Home feature cards */
+
+html[data-theme="dark"] .feature-card,
+html[data-theme="dark"] .food-placeholder,
+html[data-theme="dark"] .destination-card,
+html[data-theme="dark"] .detail-info-card,
+html[data-theme="dark"] .activity-card,
+html[data-theme="dark"] .location-card,
+html[data-theme="dark"] .food-card,
+html[data-theme="dark"] .maps-place-card,
+html[data-theme="dark"] .itinerary-stop-content,
+html[data-theme="dark"] .packing-progress-card,
+html[data-theme="dark"] .packing-section,
+html[data-theme="dark"] .itinerary-reminder {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .feature-card h3,
+html[data-theme="dark"] .food-placeholder p,
+html[data-theme="dark"] .destination-info h3,
+html[data-theme="dark"] .food-card h3,
+html[data-theme="dark"] .location-card strong,
+html[data-theme="dark"] .activity-card p,
+html[data-theme="dark"] .maps-place-info strong,
+html[data-theme="dark"] .itinerary-stop-content h3,
+html[data-theme="dark"] .packing-section-heading h2 {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .feature-card p,
+html[data-theme="dark"] .destination-info p,
+html[data-theme="dark"] .food-description,
+html[data-theme="dark"] .location-card p,
+html[data-theme="dark"] .detail-section > p,
+html[data-theme="dark"] .maps-place-info span,
+html[data-theme="dark"] .itinerary-stop-content p,
+html[data-theme="dark"] .itinerary-reminder p {
+  color: var(--muted);
+}
+
+/* Feature icons */
+
+html[data-theme="dark"] .green {
+  background: #304b37;
+  color: #a5d1a9;
+}
+
+html[data-theme="dark"] .orange {
+  background: #4a3a2c;
+  color: #e6b47d;
+}
+
+html[data-theme="dark"] .blue {
+  background: #2c414b;
+  color: #9bc9df;
+}
+
+html[data-theme="dark"] .purple {
+  background: #40364f;
+  color: #c4afe6;
+}
+
+/* Destination cards */
+
+html[data-theme="dark"] .destination-image {
+  background-color: #35463a;
+}
+
+html[data-theme="dark"] .destination-badge {
+  background: rgba(25, 38, 29, .94);
+  color: #b5d9b9;
+}
+
+html[data-theme="dark"] .destination-meta span {
+  background: #304237;
+  color: #c1d7c4;
+}
+
+/* Food cards */
+
+html[data-theme="dark"] .food-category,
+html[data-theme="dark"] .food-tags span,
+html[data-theme="dark"] .food-visit-note {
+  background: #304237;
+  color: #c1d7c4;
+}
+
+html[data-theme="dark"] .food-price {
+  color: #b4d5b8;
+}
+
+html[data-theme="dark"] .food-specialities,
+html[data-theme="dark"] .food-detail-line,
+html[data-theme="dark"] .food-disclaimer {
+  color: var(--muted);
+}
+
+/* Bottom navigation */
+
+html[data-theme="dark"] .bottom-nav {
+  background: rgba(27, 39, 31, .97);
+  border-color: var(--border);
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, .25);
+}
+
+html[data-theme="dark"] .nav-item {
+  color: #9aaa9d;
+}
+
+html[data-theme="dark"] .nav-item.active {
+  color: #a8d2ad;
+}
+
+/* Detail page */
+
+html[data-theme="dark"] .detail-header {
+  background: var(--cream);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .detail-header > span {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .back-button {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .detail-description {
+  color: var(--muted);
+}
+
+/* Detail information cards */
+
+html[data-theme="dark"] .detail-info-card span,
+html[data-theme="dark"] .detail-info-card strong {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .detail-info-card svg,
+html[data-theme="dark"] .detail-section-heading > svg {
+  color: #a4c9a8;
+}
+
+/* Best time and November cards */
+
+html[data-theme="dark"] .best-time-card {
+  background: #263d31;
+  border-color: #3c5744;
+}
+
+html[data-theme="dark"] .best-time-content span,
+html[data-theme="dark"] .best-time-content strong,
+html[data-theme="dark"] .best-time-content p {
+  color: #d4e5d6;
+}
+
+html[data-theme="dark"] .best-time-icon {
+  background: #38543e;
+  color: #b4d8b8;
+}
+
+html[data-theme="dark"] .november-note-card {
+  background: #3a3025;
+  border-color: #554634;
+}
+
+html[data-theme="dark"] .november-note-content span,
+html[data-theme="dark"] .november-note-content h3,
+html[data-theme="dark"] .november-note-content p {
+  color: #e8d5b7;
+}
+
+html[data-theme="dark"] .november-note-icon {
+  background: #55432f;
+  color: #e9c28d;
+}
+
+/* Activity cards */
+
+html[data-theme="dark"] .activity-icon {
+  background: #304638;
+  color: #a8d0ad;
+}
+
+/* Directions button */
+
+html[data-theme="dark"] .directions-button {
+  background: #477b53;
+  color: white;
+}
+
+/* Search */
+
+html[data-theme="dark"] .page-search {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .page-search input {
+  background: transparent;
+  color: var(--text);
+}
+
+html[data-theme="dark"] .page-search input::placeholder {
+  color: #91a194;
+}
+
+/* Filters */
+
+html[data-theme="dark"] .filter-chip {
+  background: var(--surface);
+  border-color: var(--border);
+  color: #b4c2b6;
+}
+
+html[data-theme="dark"] .filter-chip.selected {
+  background: #477b53;
+  border-color: #477b53;
+  color: white;
+}
+
+/* Empty states */
+
+html[data-theme="dark"] .empty-state {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .empty-state strong {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .empty-state p {
+  color: var(--muted);
+}
+
+/* Itinerary */
+
+html[data-theme="dark"] .itinerary-summary,
+html[data-theme="dark"] .itinerary-day-selector {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .itinerary-summary strong,
+html[data-theme="dark"] .itinerary-day-content h2,
+html[data-theme="dark"] .itinerary-stop-content h3 {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .itinerary-summary span {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .itinerary-day-chip {
+  background: #304237;
+  color: #b9c9bb;
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .itinerary-day-chip.selected {
+  background: #477b53;
+  color: white;
+}
+
+html[data-theme="dark"] .itinerary-timeline-marker {
+  background: #477b53;
+  border-color: #8fbd96;
+}
+
+html[data-theme="dark"] .itinerary-reminder {
+  background: #2b3e30;
+  border-color: #405b45;
+}
+
+/* Maps */
+
+html[data-theme="dark"] .maps-route-card {
+  background: #263d31;
+  border-color: #3c5744;
+  color: var(--text);
+}
+
+html[data-theme="dark"] .maps-route-card strong,
+html[data-theme="dark"] .maps-route-card p {
+  color: #d4e5d6;
+}
+
+html[data-theme="dark"] .maps-route-icon,
+html[data-theme="dark"] .maps-place-icon {
+  background: #38543e;
+  color: #b4d8b8;
+}
+
+html[data-theme="dark"] .maps-disclaimer {
+  color: var(--muted);
+}
+
+/* Packing and essentials */
+
+html[data-theme="dark"] .packing-progress-card,
+html[data-theme="dark"] .packing-section {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .packing-progress-heading span,
+html[data-theme="dark"] .packing-progress-heading strong {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .packing-progress-track {
+  background: #39493d;
+}
+
+html[data-theme="dark"] .packing-section-icon {
+  background: #304638;
+  color: #b4d8b8;
+}
+
+html[data-theme="dark"] .packing-section-heading span {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .packing-item {
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .packing-item-label {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .packing-item.checked .packing-item-label {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .packing-checkbox {
+  border-color: #718b75;
+  background: #26352b;
+}
+
+html[data-theme="dark"] .packing-item.checked .packing-checkbox {
+  background: #477b53;
+  border-color: #477b53;
+}
+
+/* Buttons and links */
+
+html[data-theme="dark"] .text-button,
+html[data-theme="dark"] .food-map-link,
+html[data-theme="dark"] .itinerary-map-link {
+  color: #a8d2ad;
+}
+
+html[data-theme="dark"] .packing-reset-button {
+  background: #3c3028;
+  color: #e4b28c;
+  border-color: #594535;
+}
+
+/* Favourite and shortlist controls */
+
+html[data-theme="dark"] .destination-action {
+  background: #304237;
+  border-color: #46594b;
+  color: #b4c5b6;
+}
+
+html[data-theme="dark"] .destination-action.active {
+  background: #3c5b42;
+  border-color: #5b8061;
+  color: #c0e4c4;
+}
+
+html[data-theme="dark"] .favourite-active {
+  color: #c0e4c4 !important;
+}
+
+html[data-theme="dark"] .shortlist-button {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .shortlist-button.active {
+  background: #304b37;
+  border-color: #52775a;
+  color: #c0e4c4;
+}
+
+/* Form controls */
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #91a194;
+}
+
+/* Focus states */
+
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] input:focus-visible,
+html[data-theme="dark"] textarea:focus-visible,
+html[data-theme="dark"] select:focus-visible {
+  outline-color: #8fbd96;
+}
+
+/* Smooth theme transitions */
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app-container,
+html[data-theme="dark"] .detail-page,
+html[data-theme="dark"] .feature-card,
+html[data-theme="dark"] .food-card,
+html[data-theme="dark"] .destination-card,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .detail-info-card {
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease;
+}

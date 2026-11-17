@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   MapPin,
@@ -11,6 +11,8 @@ import {
   Utensils,
   Home,
   Backpack,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 import { destinations } from "./data/destinations";
@@ -40,11 +42,97 @@ function App() {
   const [selectedDestination, setSelectedDestination] =
     useState<Destination | null>(null);
 
+  // Theme preference
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const savedTheme = localStorage.getItem("himachal-theme");
+      return savedTheme === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+
+    try {
+      localStorage.setItem("himachal-theme", theme);
+    } catch {
+      // Continue using the selected theme if storage is unavailable.
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === "light" ? "dark" : "light"));
+  };
+
+  // Load saved favourites
+  const [favourites, setFavourites] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem("himachal-favourites");
+      return saved ? (JSON.parse(saved) as number[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Load saved shortlist
+  const [shortlist, setShortlist] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem("himachal-shortlist");
+      return saved ? (JSON.parse(saved) as number[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist favourites
+  useEffect(() => {
+    localStorage.setItem(
+      "himachal-favourites",
+      JSON.stringify(favourites)
+    );
+  }, [favourites]);
+
+  // Persist shortlist
+  useEffect(() => {
+    localStorage.setItem(
+      "himachal-shortlist",
+      JSON.stringify(shortlist)
+    );
+  }, [shortlist]);
+
+  // Toggle favourite destination
+  const toggleFavourite = (id: number) => {
+    setFavourites((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
+  // Toggle destination shortlist
+  const toggleShortlist = (id: number) => {
+    setShortlist((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
   if (selectedDestination) {
     return (
       <DestinationDetail
         destination={selectedDestination}
         onBack={() => setSelectedDestination(null)}
+        isFavourite={favourites.includes(selectedDestination.id)}
+        isShortlisted={shortlist.includes(selectedDestination.id)}
+        onToggleFavourite={() =>
+          toggleFavourite(selectedDestination.id)
+        }
+        onToggleShortlist={() =>
+          toggleShortlist(selectedDestination.id)
+        }
       />
     );
   }
@@ -60,17 +148,39 @@ function App() {
                 Himachal<span> Explorer.</span>
               </h1>
             </div>
-            <div className="profile-icon">A</div>
+
+            <div className="header-actions">
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${
+                  theme === "light" ? "dark" : "light"
+                } mode`}
+                title={`Switch to ${
+                  theme === "light" ? "dark" : "light"
+                } mode`}
+              >
+                {theme === "light" ? (
+                  <Moon size={19} />
+                ) : (
+                  <Sun size={19} />
+                )}
+              </button>
+
+              <div className="profile-icon">A</div>
+            </div>
           </header>
 
           <section className="hero-section">
             <div className="hero-overlay">
               <span className="trip-badge">YOUR NEXT ESCAPE</span>
+
               <h2>
                 Mountains are
                 <br />
                 calling.
               </h2>
+
               <p>Dalhousie, Himachal Pradesh</p>
 
               <div className="trip-details">
@@ -78,6 +188,7 @@ function App() {
                   <CalendarDays size={17} />
                   <span>25 Nov – 1 Dec</span>
                 </div>
+
                 <div>
                   <Users size={17} />
                   <span>3 Travellers</span>
@@ -183,10 +294,12 @@ function App() {
               onClick={() => setPage("explore")}
             >
               <Compass size={24} />
+
               <p>
                 Explore {destinations.length} selected destinations,
                 peaceful walks and mountain escapes.
               </p>
+
               <ArrowRight size={19} />
             </button>
           </section>
@@ -197,6 +310,7 @@ function App() {
                 <span className="eyebrow">GOOD FOOD, GOOD MOOD</span>
                 <h2>Food discoveries</h2>
               </div>
+
               <Utensils size={22} />
             </div>
 
@@ -205,9 +319,11 @@ function App() {
               onClick={() => setPage("food")}
             >
               <Utensils size={24} />
+
               <p>
                 Find cafes, restaurants and local food around Dalhousie.
               </p>
+
               <ArrowRight size={19} />
             </button>
           </section>
@@ -225,9 +341,11 @@ function App() {
               onClick={() => setPage("essentials")}
             >
               <Backpack size={24} />
+
               <p>
                 Check your packing list and prepare for November weather.
               </p>
+
               <ArrowRight size={19} />
             </button>
           </section>
@@ -239,6 +357,10 @@ function App() {
           destinations={destinations}
           onBack={() => setPage("home")}
           onSelectDestination={setSelectedDestination}
+          favourites={favourites}
+          shortlist={shortlist}
+          onToggleFavourite={toggleFavourite}
+          onToggleShortlist={toggleShortlist}
         />
       )}
 

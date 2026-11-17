@@ -1,4 +1,3 @@
-
 import {
   ArrowLeft,
   Clock,
@@ -11,6 +10,8 @@ import {
   Lightbulb,
   Sun,
   CalendarDays,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 
 import type { Destination } from "../data/destinations";
@@ -18,11 +19,19 @@ import type { Destination } from "../data/destinations";
 interface DestinationDetailProps {
   destination: Destination;
   onBack: () => void;
+  isFavourite: boolean;
+  isShortlisted: boolean;
+  onToggleFavourite: () => void;
+  onToggleShortlist: () => void;
 }
 
 function DestinationDetail({
   destination,
   onBack,
+  isFavourite,
+  isShortlisted,
+  onToggleFavourite,
+  onToggleShortlist,
 }: DestinationDetailProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     `${destination.name}, ${destination.location}, Himachal Pradesh, India`
@@ -37,8 +46,20 @@ function DestinationDetail({
 
         <span>DESTINATION GUIDE</span>
 
-        <button className="back-button" aria-label="Favourite destination">
-          <Heart size={21} />
+        <button
+          className={`back-button ${isFavourite ? "favourite-active" : ""}`}
+          onClick={onToggleFavourite}
+          aria-label={
+            isFavourite
+              ? "Remove from favourites"
+              : "Add to favourites"
+          }
+          aria-pressed={isFavourite}
+        >
+          <Heart
+            size={21}
+            fill={isFavourite ? "currentColor" : "none"}
+          />
         </button>
       </header>
 
@@ -55,6 +76,22 @@ function DestinationDetail({
         <p className="detail-description">
           {destination.description}
         </p>
+
+        <button
+          className={`shortlist-button ${isShortlisted ? "active" : ""}`}
+          onClick={onToggleShortlist}
+          aria-pressed={isShortlisted}
+        >
+          {isShortlisted ? (
+            <BookmarkCheck size={19} />
+          ) : (
+            <Bookmark size={19} />
+          )}
+
+          {isShortlisted
+            ? "Added to your shortlist"
+            : "Add to my trip shortlist"}
+        </button>
 
         <div className="detail-info-grid">
           <div className="detail-info-card">
@@ -74,11 +111,14 @@ function DestinationDetail({
           <div className="best-time-icon">
             <Sun size={23} />
           </div>
+
           <div className="best-time-content">
             <span>RECOMMENDED VISITING TIME</span>
             <strong>{destination.bestTime}</strong>
+
             <p>
-              Suggested timing. Check local weather and conditions before heading out.
+              Suggested timing. Check local weather and conditions before
+              heading out.
             </p>
           </div>
         </div>
@@ -87,6 +127,7 @@ function DestinationDetail({
           <div className="november-note-icon">
             <CalendarDays size={23} />
           </div>
+
           <div className="november-note-content">
             <span>SEASONAL TRAVEL GUIDE</span>
             <h3>November Travel Note</h3>
@@ -105,6 +146,7 @@ function DestinationDetail({
               <span className="eyebrow">MAKE THE MOST OF YOUR VISIT</span>
               <h2>Things to do</h2>
             </div>
+
             <Compass size={23} />
           </div>
 
@@ -114,6 +156,7 @@ function DestinationDetail({
                 <div className="activity-icon">
                   <CheckCircle2 size={19} />
                 </div>
+
                 <p>{activity}</p>
               </div>
             ))}
@@ -126,6 +169,7 @@ function DestinationDetail({
               <span className="eyebrow">A FEW USEFUL POINTERS</span>
               <h2>Travel tips</h2>
             </div>
+
             <Lightbulb size={23} />
           </div>
 
@@ -135,6 +179,7 @@ function DestinationDetail({
                 <div className="activity-icon">
                   <Lightbulb size={18} />
                 </div>
+
                 <p>{tip}</p>
               </div>
             ))}
@@ -146,8 +191,10 @@ function DestinationDetail({
 
           <div className="location-card">
             <MapPin size={23} />
+
             <div>
               <strong>{destination.name}</strong>
+
               <p>
                 {destination.location}, Himachal Pradesh, India
               </p>
