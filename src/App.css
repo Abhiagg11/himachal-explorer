@@ -2246,3 +2246,314 @@ html[data-theme="dark"] .detail-info-card {
     color .2s ease,
     border-color .2s ease;
 }
+
+
+/* =========================================
+   DARK MODE — GLOBAL CONSISTENCY PATCH
+========================================= */
+
+/* Common card and content surfaces */
+html[data-theme="dark"] .itinerary-summary > div,
+html[data-theme="dark"] .itinerary-day-selector,
+html[data-theme="dark"] .itinerary-stop-content,
+html[data-theme="dark"] .food-placeholder,
+html[data-theme="dark"] .food-card,
+html[data-theme="dark"] .maps-place-card,
+html[data-theme="dark"] .packing-items,
+html[data-theme="dark"] .packing-reset-button,
+html[data-theme="dark"] .page-search,
+html[data-theme="dark"] .filter-chip,
+html[data-theme="dark"] .destination-action,
+html[data-theme="dark"] .shortlist-button {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Common text elements */
+html[data-theme="dark"] .food-detail-line strong,
+html[data-theme="dark"] .food-specialities > strong,
+html[data-theme="dark"] .packing-item-label,
+html[data-theme="dark"] .empty-state strong {
+  color: var(--text);
+}
+
+/* Nested cards and information panels */
+html[data-theme="dark"] .itinerary-summary > div,
+html[data-theme="dark"] .itinerary-day-chip,
+html[data-theme="dark"] .maps-place-card,
+html[data-theme="dark"] .packing-items {
+  background-color: var(--surface);
+}
+
+/* Form containers and controls */
+html[data-theme="dark"] form,
+html[data-theme="dark"] .expense-form,
+html[data-theme="dark"] .form-card,
+html[data-theme="dark"] .form-container,
+html[data-theme="dark"] .expense-card,
+html[data-theme="dark"] .expense-summary,
+html[data-theme="dark"] .expense-total-card {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Inputs and date controls */
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: #243129;
+  color: #edf3ed;
+  border-color: #46594b;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #a1b0a3;
+}
+
+/* Buttons inside forms */
+html[data-theme="dark"] form button:not(.directions-button),
+html[data-theme="dark"] .expense-form button {
+  color: var(--text);
+}
+
+/* Prevent white backgrounds on common nested surfaces */
+html[data-theme="dark"] .itinerary-summary > div,
+html[data-theme="dark"] .destination-info,
+html[data-theme="dark"] .food-card,
+html[data-theme="dark"] .activity-card,
+html[data-theme="dark"] .location-card {
+  color: var(--text);
+}
+
+/* Smooth transitions */
+html[data-theme="dark"] * {
+  scrollbar-color: #526858 #17221c;
+}
+
+
+/* =========================================
+   DARK MODE — EXPENSES & ITINERARY FIX
+========================================= */
+
+/* EXPENSES: total expenditure */
+html[data-theme="dark"] .expense-total-card {
+  background: #263d31 !important;
+  border-color: #405b45 !important;
+  color: #edf3ed !important;
+}
+
+html[data-theme="dark"] .expense-total-card > span,
+html[data-theme="dark"] .expense-total-card h2,
+html[data-theme="dark"] .expense-total-card p {
+  color: #d4e5d6 !important;
+}
+
+html[data-theme="dark"] .expense-total-icon {
+  background: #38543e !important;
+  color: #b4d8b8 !important;
+}
+
+/* EXPENSES: payer selection */
+html[data-theme="dark"] .expense-person-tab {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-person-tab.active {
+  background: #477b53 !important;
+  border-color: #477b53 !important;
+  color: #ffffff !important;
+}
+
+/* EXPENSES: form and fields */
+html[data-theme="dark"] .expense-form {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-form label {
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-form input {
+  background: #17221c !important;
+  border-color: #46594b !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-form input:focus {
+  background: #1d2b22 !important;
+  border-color: var(--green) !important;
+}
+
+html[data-theme="dark"] .expense-amount-input {
+  background: #17221c !important;
+  border-color: #46594b !important;
+  color: #a8d2ad !important;
+}
+
+html[data-theme="dark"] .expense-amount-input input {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .expense-cancel-button {
+  background: #304237 !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* EXPENSES: payment history and empty state */
+html[data-theme="dark"] .expense-empty {
+  background: #243129 !important;
+  border-color: #526858 !important;
+  color: var(--muted) !important;
+}
+
+html[data-theme="dark"] .expense-empty p,
+html[data-theme="dark"] .expense-empty span {
+  color: var(--muted) !important;
+}
+
+html[data-theme="dark"] .expense-entry {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+html[data-theme="dark"] .expense-entry-icon {
+  background: #304638 !important;
+  color: #b4d8b8 !important;
+}
+
+html[data-theme="dark"] .expense-entry-details strong,
+html[data-theme="dark"] .expense-entry-right > strong {
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-entry-details span,
+html[data-theme="dark"] .expense-entry-details small {
+  color: var(--muted) !important;
+}
+
+/* EXPENSES: summary cards */
+html[data-theme="dark"] .expense-summary-person {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+html[data-theme="dark"] .expense-summary-person > strong:first-child {
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .expense-summary-person div,
+html[data-theme="dark"] .expense-summary-person small {
+  color: var(--muted) !important;
+}
+
+html[data-theme="dark"] .expense-positive {
+  color: #8fd1a1 !important;
+}
+
+html[data-theme="dark"] .expense-negative {
+  color: #f09b91 !important;
+}
+
+/* EXPENSES: settlement panel */
+html[data-theme="dark"] .expense-settlement {
+  background: #263d31 !important;
+  border-color: #405b45 !important;
+}
+
+html[data-theme="dark"] .expense-settlement h3,
+html[data-theme="dark"] .expense-settlement p,
+html[data-theme="dark"] .settlement-row {
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .settlement-row {
+  border-color: #405b45 !important;
+}
+
+html[data-theme="dark"] .settlement-row strong,
+html[data-theme="dark"] .settlement-arrow {
+  color: #a8d2ad !important;
+}
+
+/* EXPENSES: error message */
+html[data-theme="dark"] .expense-error {
+  background: #492c29 !important;
+  color: #ffc0b7 !important;
+}
+
+/* ITINERARY: progress panel */
+html[data-theme="dark"] .itinerary-summary > div {
+  background: var(--surface) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-selector {
+  background: #1d2b22 !important;
+}
+
+html[data-theme="dark"] .itinerary-day-chip {
+  background: #304237 !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-chip.selected {
+  background: #477b53 !important;
+  color: #ffffff !important;
+}
+
+/* ITINERARY: inline progress and activity form */
+html[data-theme="dark"] .itinerary-day-content > div[style*="Shared trip progress"] {
+  background: #263d31 !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-content form {
+  background: var(--surface) !important;
+  border: 1px solid var(--border);
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-content form strong,
+html[data-theme="dark"] .itinerary-day-content form label {
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-content form input,
+html[data-theme="dark"] .itinerary-day-content form textarea {
+  background: #17221c !important;
+  border-color: #46594b !important;
+  color: var(--text) !important;
+}
+
+html[data-theme="dark"] .itinerary-day-content form input::placeholder,
+html[data-theme="dark"] .itinerary-day-content form textarea::placeholder {
+  color: #91a194 !important;
+}
+
+html[data-theme="dark"] .itinerary-day-content form button:not(:last-child) {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .itinerary-day-content form button[style] {
+  border-color: var(--border) !important;
+}
+
+/* ITINERARY: action buttons */
+html[data-theme="dark"] .itinerary-stop-content button {
+  border-color: var(--border) !important;
+  color: var(--text);
+}
+
+/* Shared dark-mode error and loading surfaces */
+html[data-theme="dark"] .detail-page [role="alert"] {
+  background: #492c29 !important;
+  color: #ffc0b7 !important;
+}
+
