@@ -1,122 +1,172 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import {
+  MapPin,
+  Wallet,
+  CalendarDays,
+  Compass,
+  Mountain,
+  Users,
+  ArrowRight,
+  Navigation,
+  Utensils,
+  Heart,
+} from "lucide-react";
+
+import { destinations } from "./data/destinations";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="app-container">
+      <header className="top-header">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+          <span className="eyebrow">YOUR PERSONAL TRAVEL GUIDE</span>
+          <h1>
+            Himachal<span> Explorer.</span>
+          </h1>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        <div className="profile-icon">A</div>
+      </header>
 
-      <div className="ticks"></div>
+      <section className="hero-section">
+        <div className="hero-overlay">
+          <span className="trip-badge">YOUR NEXT ESCAPE</span>
+          <h2>
+            Mountains are
+            <br />
+            calling.
+          </h2>
+          <p>Dalhousie, Himachal Pradesh</p>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+          <div className="trip-details">
+            <div>
+              <CalendarDays size={17} />
+              <span>25 Nov – 1 Dec</span>
+            </div>
+            <div>
+              <Users size={17} />
+              <span>3 Travellers</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">YOUR TRIP</span>
+            <h2>Explore everything</h2>
+          </div>
+        </div>
+
+        <div className="feature-grid">
+          <div className="feature-card">
+            <div className="feature-icon green">
+              <Compass />
+            </div>
+            <h3>Explore</h3>
+            <p>Places &amp; hidden gems</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon orange">
+              <Wallet />
+            </div>
+            <h3>Expenses</h3>
+            <p>Track &amp; split bills</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon blue">
+              <MapPin />
+            </div>
+            <h3>Maps</h3>
+            <p>Find your way around</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon purple">
+              <CalendarDays />
+            </div>
+            <h3>Itinerary</h3>
+            <p>Your daily travel plan</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">HANDPICKED FOR YOU</span>
+            <h2>Discover Dalhousie</h2>
+          </div>
+          <button className="text-button" type="button">
+            View all <ArrowRight size={15} />
+          </button>
+        </div>
+
+        <div className="destination-list">
+          {destinations.map((place) => (
+            <article className="destination-card" key={place.id}>
+              <div
+                className="destination-image"
+                style={{ backgroundImage: `url("${place.image}")` }}
+                role="img"
+                aria-label={place.name}
+              >
+                <span className="destination-badge">{place.category}</span>
+              </div>
+
+              <div className="destination-info">
+                <div>
+                  <span className="destination-category">{place.location}</span>
+                  <h3>{place.name}</h3>
+                  <p>{place.description}</p>
+                  <div className="destination-meta">
+                    <span>{place.duration}</span>
+                    <span>{place.bestFor}</span>
+                  </div>
+                </div>
+                <Heart size={21} aria-label="Save destination" />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">GOOD FOOD, GOOD MOOD</span>
+            <h2>Food discoveries</h2>
+          </div>
+          <Utensils size={22} />
+        </div>
+        <div className="food-placeholder">
+          <Utensils size={24} />
+          <p>Discover the best cafes and local food in Dalhousie.</p>
+        </div>
+      </section>
+
+      <nav className="bottom-nav" aria-label="Main navigation">
+        <div className="nav-item active">
+          <Compass size={21} />
+          <span>Home</span>
+        </div>
+        <div className="nav-item">
+          <MapPin size={21} />
+          <span>Explore</span>
+        </div>
+        <div className="nav-item">
+          <Wallet size={21} />
+          <span>Expenses</span>
+        </div>
+        <div className="nav-item">
+          <Navigation size={21} />
+          <span>Maps</span>
+        </div>
+      </nav>
+    </main>
+  );
 }
 
-export default App
+export default App;
