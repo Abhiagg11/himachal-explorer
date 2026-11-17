@@ -1,5 +1,10 @@
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { FormEvent } from "react";
 import {
   ArrowLeft,
@@ -52,6 +57,10 @@ function formatMoney(paise: number) {
   });
 }
 
+function getErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 function ExpensesPage({ onBack }: { onBack: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -65,55 +74,63 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+
+  const mountedRef = useRef(false);
+  const refreshInFlightRef = useRef(false);
 
   const loadData = useCallback(async () => {
-    const [membersResult, expensesResult] = await Promise.all([
-      supabase
-        .from("trip_members")
-        .select("id, display_name")
-        .eq("trip_id", TRIP_ID),
+    if (!mountedRef.current || refreshInFlightRef.current) return;
 
-      supabase
-        .from("expenses")
-        .select(
-          "id, trip_id, paid_by_member_id, description, amount, expense_date, created_at"
-        )
-        .eq("trip_id", TRIP_ID)
-        .order("expense_date", { ascending: false })
-        .order("created_at", { ascending: false }),
-    ]);
+    refreshInFlightRef.current = true;
 
-    if (membersResult.error) {
-      throw membersResult.error;
+    try {
+      const [membersResult, expensesResult] = await Promise.all([
+        supabase
+          .from("trip_members")
+          .select("id, display_name")
+          .eq("trip_id", TRIP_ID),
+
+        supabase
+          .from("expenses")
+          .select(
+            "id, trip_id, paid_by_member_id, description, amount, expense_date, created_at"
+          )
+          .eq("trip_id", TRIP_ID)
+          .order("expense_date", { ascending: false })
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (membersResult.error) throw membersResult.error;
+      if (expensesResult.error) throw expensesResult.error;
+
+      if (mountedRef.current) {
+        setMembers((membersResult.data ?? []) as Member[]);
+        setExpenses((expensesResult.data ?? []) as Expense[]);
+        setError("");
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(getErrorMessage(err, "Unable to load trip expenses."));
+      }
+      throw err;
+    } finally {
+      refreshInFlightRef.current = false;
+
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-
-    if (expensesResult.error) {
-      throw expensesResult.error;
-    }
-
-    const loadedMembers = (membersResult.data ?? []) as Member[];
-    const loadedExpenses = (expensesResult.data ?? []) as Expense[];
-
-    setMembers(loadedMembers);
-    setExpenses(loadedExpenses);
   }, []);
 
   useEffect(() => {
-    let active = true;
+    mountedRef.current = true;
 
     async function initialise() {
       try {
         await loadData();
-      } catch (err) {
-        if (active) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load trip expenses."
-          );
-        }
-      } finally {
-        if (active) setLoading(false);
+      } catch {
+        // loadData already reports the error to the page.
       }
     }
 
@@ -130,26 +147,30 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           filter: `trip_id=eq.${TRIP_ID}`,
         },
         () => {
-          void loadData().catch((err: unknown) => {
-            if (active) {
-              setError(
-                err instanceof Error
-                  ? err.message
-                  : "Unable to refresh expenses."
-              );
-            }
+          void loadData().catch(() => {
+            // loadData already reports the refresh error.
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (
+          mountedRef.current &&
+          (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+        ) {
+          setError(
+            "Live expense updates are temporarily unavailable. Automatic refresh will continue."
+          );
+        }
+      });
 
-    // Fallback refresh in case realtime is temporarily unavailable.
     const refreshInterval = window.setInterval(() => {
-      void loadData().catch(() => undefined);
+      void loadData().catch(() => {
+        // The error is displayed by loadData.
+      });
     }, 15000);
 
     return () => {
-      active = false;
+      mountedRef.current = false;
       window.clearInterval(refreshInterval);
       void supabase.removeChannel(channel);
     };
@@ -277,6 +298,9 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
 
   async function saveExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (saving) return;
+
     setError("");
 
     const parsedAmount = Number(amount);
@@ -330,14 +354,15 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
         if (insertError) throw insertError;
       }
 
-      resetForm();
+      if (mountedRef.current) resetForm();
+
       await loadData();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to save expense."
-      );
+      if (mountedRef.current) {
+        setError(getErrorMessage(err, "Unable to save expense."));
+      }
     } finally {
-      setSaving(false);
+      if (mountedRef.current) setSaving(false);
     }
   }
 
@@ -356,6 +381,8 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
   }
 
   async function deleteExpense(id: string) {
+    if (deletingIds.includes(id)) return;
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this expense?"
     );
@@ -363,26 +390,30 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
     if (!confirmed) return;
 
     setError("");
-
-    const { error: deleteError } = await supabase
-      .from("expenses")
-      .delete()
-      .eq("id", id)
-      .eq("trip_id", TRIP_ID);
-
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
-    }
-
-    if (editingId === id) resetForm();
+    setDeletingIds((current) => [...current, id]);
 
     try {
+      const { error: deleteError } = await supabase
+        .from("expenses")
+        .delete()
+        .eq("id", id)
+        .eq("trip_id", TRIP_ID);
+
+      if (deleteError) throw deleteError;
+
+      if (mountedRef.current && editingId === id) {
+        resetForm();
+      }
+
       await loadData();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to refresh expenses."
-      );
+      if (mountedRef.current) {
+        setError(getErrorMessage(err, "Unable to delete expense."));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setDeletingIds((current) => current.filter((item) => item !== id));
+      }
     }
   }
 
@@ -578,6 +609,7 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
                       onClick={() => void deleteExpense(expense.id)}
                       aria-label={`Delete ${expense.description}`}
                       type="button"
+                      disabled={deletingIds.includes(expense.id)}
                     >
                       <Trash2 size={16} />
                     </button>

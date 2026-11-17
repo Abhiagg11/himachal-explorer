@@ -1,5 +1,10 @@
-
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -81,6 +86,10 @@ const DAY_DATES = [
   "2026-12-01",
 ];
 
+function getErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 function ItineraryPage({ onBack }: ItineraryPageProps) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -90,33 +99,56 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [busyActivityIds, setBusyActivityIds] = useState<string[]>([]);
 
   const [formName, setFormName] = useState("");
   const [formTime, setFormTime] = useState("Flexible");
   const [formNote, setFormNote] = useState("");
 
+  const mountedRef = useRef(false);
+  const refreshInFlightRef = useRef(false);
+
   const day = days[selectedDay];
 
   const fetchActivities = useCallback(async () => {
-    const { data, error: fetchError } = await supabase
-      .from("trip_activities")
-      .select("*")
-      .eq("trip_id", TRIP_ID)
-      .order("day_number", { ascending: true })
-      .order("sort_order", { ascending: true });
+    if (!mountedRef.current || refreshInFlightRef.current) return;
 
-    if (fetchError) {
-      setError(fetchError.message);
-      return;
+    refreshInFlightRef.current = true;
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("trip_activities")
+        .select("*")
+        .eq("trip_id", TRIP_ID)
+        .order("day_number", { ascending: true })
+        .order("sort_order", { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      if (mountedRef.current) {
+        setActivities((data ?? []) as Activity[]);
+        setError("");
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(
+          getErrorMessage(err, "Unable to load the shared itinerary.")
+        );
+      }
+    } finally {
+      refreshInFlightRef.current = false;
+
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-
-    setActivities((data ?? []) as Activity[]);
-    setError("");
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchActivities();
+    mountedRef.current = true;
+
+    // Defer the initial request to keep state updates outside the effect body.
+    void Promise.resolve().then(fetchActivities);
 
     const channel = supabase
       .channel("shared-trip-itinerary")
@@ -129,16 +161,29 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
           filter: `trip_id=eq.${TRIP_ID}`,
         },
         () => {
-          fetchActivities();
+          void fetchActivities();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (
+          mountedRef.current &&
+          (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+        ) {
+          setError(
+            "Live updates are temporarily unavailable. Automatic refresh will continue."
+          );
+        }
+      });
 
-    const polling = window.setInterval(fetchActivities, 15000);
+    // Fallback refresh in case realtime is unavailable.
+    const polling = window.setInterval(() => {
+      void fetchActivities();
+    }, 15000);
 
     return () => {
+      mountedRef.current = false;
       window.clearInterval(polling);
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [fetchActivities]);
 
@@ -169,106 +214,138 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formName.trim()) return;
+    if (!formName.trim() || saving) return;
 
     setSaving(true);
     setError("");
 
-    if (editingId) {
-      const { error: updateError } = await supabase
-        .from("trip_activities")
-        .update({
-          name: formName.trim(),
-          time_label: formTime.trim() || "Flexible",
-          note: formNote.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editingId)
-        .eq("trip_id", TRIP_ID);
+    try {
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from("trip_activities")
+          .update({
+            name: formName.trim(),
+            time_label: formTime.trim() || "Flexible",
+            note: formNote.trim(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", editingId)
+          .eq("trip_id", TRIP_ID);
 
-      if (updateError) {
-        setError(updateError.message);
-        setSaving(false);
-        return;
+        if (updateError) throw updateError;
+      } else {
+        const dayActivities = activities.filter(
+          (activity) => activity.day_number === selectedDay + 1
+        );
+
+        const nextOrder =
+          Math.max(0, ...dayActivities.map((activity) => activity.sort_order)) +
+          1;
+
+        const { error: insertError } = await supabase
+          .from("trip_activities")
+          .insert({
+            trip_id: TRIP_ID,
+            day_number: selectedDay + 1,
+            activity_date: DAY_DATES[selectedDay],
+            time_label: formTime.trim() || "Flexible",
+            name: formName.trim(),
+            note: formNote.trim(),
+            is_completed: false,
+            sort_order: nextOrder,
+          });
+
+        if (insertError) throw insertError;
       }
-    } else {
-      const dayActivities = activities.filter(
-        (activity) => activity.day_number === selectedDay + 1
-      );
 
-      const nextOrder =
-        Math.max(0, ...dayActivities.map((activity) => activity.sort_order)) + 1;
-
-      const { error: insertError } = await supabase
-        .from("trip_activities")
-        .insert({
-          trip_id: TRIP_ID,
-          day_number: selectedDay + 1,
-          activity_date: DAY_DATES[selectedDay],
-          time_label: formTime.trim() || "Flexible",
-          name: formName.trim(),
-          note: formNote.trim(),
-          is_completed: false,
-          sort_order: nextOrder,
-        });
-
-      if (insertError) {
-        setError(insertError.message);
-        setSaving(false);
-        return;
-      }
+      closeForm();
+      await fetchActivities();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to save this activity."));
+    } finally {
+      if (mountedRef.current) setSaving(false);
     }
-
-    closeForm();
-    setSaving(false);
-    await fetchActivities();
   };
 
   const toggleCompleted = async (activity: Activity) => {
-    const { error: updateError } = await supabase
-      .from("trip_activities")
-      .update({
-        is_completed: !activity.is_completed,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", activity.id)
-      .eq("trip_id", TRIP_ID);
+    if (busyActivityIds.includes(activity.id)) return;
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+    setError("");
+    setBusyActivityIds((current) => [...current, activity.id]);
+
+    try {
+      const { error: updateError } = await supabase
+        .from("trip_activities")
+        .update({
+          is_completed: !activity.is_completed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", activity.id)
+        .eq("trip_id", TRIP_ID);
+
+      if (updateError) throw updateError;
+
+      if (mountedRef.current) {
+        setActivities((current) =>
+          current.map((item) =>
+            item.id === activity.id
+              ? { ...item, is_completed: !activity.is_completed }
+              : item
+          )
+        );
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(getErrorMessage(err, "Unable to update this activity."));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setBusyActivityIds((current) =>
+          current.filter((id) => id !== activity.id)
+        );
+      }
     }
-
-    setActivities((current) =>
-      current.map((item) =>
-        item.id === activity.id
-          ? { ...item, is_completed: !item.is_completed }
-          : item
-      )
-    );
   };
 
   const deleteActivity = async (activity: Activity) => {
+    if (busyActivityIds.includes(activity.id)) return;
+
     const confirmed = window.confirm(
       `Delete "${activity.name}" from the itinerary?`
     );
 
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabase
-      .from("trip_activities")
-      .delete()
-      .eq("id", activity.id)
-      .eq("trip_id", TRIP_ID);
+    setError("");
+    setBusyActivityIds((current) => [...current, activity.id]);
 
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
+    try {
+      const { error: deleteError } = await supabase
+        .from("trip_activities")
+        .delete()
+        .eq("id", activity.id)
+        .eq("trip_id", TRIP_ID);
+
+      if (deleteError) throw deleteError;
+
+      if (mountedRef.current) {
+        setActivities((current) =>
+          current.filter((item) => item.id !== activity.id)
+        );
+
+        if (editingId === activity.id) closeForm();
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(getErrorMessage(err, "Unable to delete this activity."));
+      }
+    } finally {
+      if (mountedRef.current) {
+        setBusyActivityIds((current) =>
+          current.filter((id) => id !== activity.id)
+        );
+      }
     }
-
-    setActivities((current) =>
-      current.filter((item) => item.id !== activity.id)
-    );
   };
 
   const dayActivities = activities.filter(
@@ -355,6 +432,7 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
 
           {error && (
             <div
+              role="alert"
               style={{
                 padding: 12,
                 margin: "14px 0",
@@ -376,92 +454,99 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
           ) : (
             <>
               <div className="itinerary-timeline">
-                {dayActivities.map((activity, index) => (
-                  <div
-                    className="itinerary-stop"
-                    key={activity.id}
-                    style={{
-                      opacity: activity.is_completed ? 0.65 : 1,
-                    }}
-                  >
-                    <div className="itinerary-timeline-marker">
-                      <span>
-                        {activity.is_completed ? (
-                          <Check size={15} />
-                        ) : (
-                          index + 1
-                        )}
-                      </span>
-                    </div>
+                {dayActivities.map((activity, index) => {
+                  const activityBusy = busyActivityIds.includes(activity.id);
 
-                    <div className="itinerary-stop-content">
-                      <span className="itinerary-time">
-                        <Clock size={13} />
-                        {activity.time_label}
-                      </span>
+                  return (
+                    <div
+                      className="itinerary-stop"
+                      key={activity.id}
+                      style={{
+                        opacity: activity.is_completed ? 0.65 : 1,
+                      }}
+                    >
+                      <div className="itinerary-timeline-marker">
+                        <span>
+                          {activity.is_completed ? (
+                            <Check size={15} />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                      </div>
 
-                      <h3
-                        style={{
-                          textDecoration: activity.is_completed
-                            ? "line-through"
-                            : "none",
-                        }}
-                      >
-                        {activity.name}
-                      </h3>
+                      <div className="itinerary-stop-content">
+                        <span className="itinerary-time">
+                          <Clock size={13} />
+                          {activity.time_label}
+                        </span>
 
-                      {activity.note && <p>{activity.note}</p>}
-
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                          `${activity.name}, Dalhousie, Himachal Pradesh, India`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="itinerary-map-link"
-                      >
-                        <MapPin size={14} /> View location
-                      </a>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 8,
-                          marginTop: 12,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => toggleCompleted(activity)}
-                          style={actionButtonStyle}
-                        >
-                          <Check size={14} />
-                          {activity.is_completed ? "Undo" : "Complete"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openEditForm(activity)}
-                          style={actionButtonStyle}
-                        >
-                          <Pencil size={14} /> Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => deleteActivity(activity)}
+                        <h3
                           style={{
-                            ...actionButtonStyle,
-                            color: "#a33322",
+                            textDecoration: activity.is_completed
+                              ? "line-through"
+                              : "none",
                           }}
                         >
-                          <Trash2 size={14} /> Delete
-                        </button>
+                          {activity.name}
+                        </h3>
+
+                        {activity.note && <p>{activity.note}</p>}
+
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            `${activity.name}, Dalhousie, Himachal Pradesh, India`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="itinerary-map-link"
+                        >
+                          <MapPin size={14} /> View location
+                        </a>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 8,
+                            marginTop: 12,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            disabled={activityBusy}
+                            onClick={() => void toggleCompleted(activity)}
+                            style={actionButtonStyle}
+                          >
+                            <Check size={14} />
+                            {activity.is_completed ? "Undo" : "Complete"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={activityBusy}
+                            onClick={() => openEditForm(activity)}
+                            style={actionButtonStyle}
+                          >
+                            <Pencil size={14} /> Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={activityBusy}
+                            onClick={() => void deleteActivity(activity)}
+                            style={{
+                              ...actionButtonStyle,
+                              color: "#a33322",
+                            }}
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {dayActivities.length === 0 && (
@@ -503,7 +588,11 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
                 <strong>
                   {editingId ? "Edit activity" : "New activity"}
                 </strong>
-                <button type="button" onClick={closeForm} style={iconButtonStyle}>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  style={iconButtonStyle}
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -540,8 +629,16 @@ function ItineraryPage({ onBack }: ItineraryPageProps) {
                 />
               </label>
 
-              <button type="submit" disabled={saving} style={addButtonStyle}>
-                {saving ? "Saving..." : editingId ? "Save changes" : "Add to itinerary"}
+              <button
+                type="submit"
+                disabled={saving}
+                style={addButtonStyle}
+              >
+                {saving
+                  ? "Saving..."
+                  : editingId
+                    ? "Save changes"
+                    : "Add to itinerary"}
               </button>
             </form>
           )}
