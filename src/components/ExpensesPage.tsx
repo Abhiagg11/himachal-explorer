@@ -1,5 +1,6 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -8,36 +9,39 @@ import {
   Receipt,
   IndianRupee,
   Users,
+  Pencil,
+  X,
+  RefreshCw,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
+
+const TRIP_ID = "11111111-1111-4111-8111-111111111111";
 
 const PEOPLE = ["Ashish", "Ayush", "Abhishek"] as const;
 type Person = (typeof PEOPLE)[number];
 
-interface Expense {
-  id: number;
-  paidBy: Person;
-  description: string;
-  amount: number;
-  date: string;
+interface Member {
+  id: string;
+  display_name: Person;
 }
 
-const STORAGE_KEY = "himachal-explorer-expenses";
+interface Expense {
+  id: string;
+  trip_id: string;
+  paid_by_member_id: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  created_at: string;
+}
 
 function getToday() {
   const today = new Date();
   const offset = today.getTimezoneOffset();
+
   return new Date(today.getTime() - offset * 60000)
     .toISOString()
     .slice(0, 10);
-}
-
-function loadExpenses(): Expense[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) as Expense[] : [];
-  } catch {
-    return [];
-  }
 }
 
 function formatMoney(paise: number) {
@@ -49,20 +53,122 @@ function formatMoney(paise: number) {
 }
 
 function ExpensesPage({ onBack }: { onBack: () => void }) {
-  const [expenses, setExpenses] = useState<Expense[]>(loadExpenses);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activePerson, setActivePerson] = useState<Person>("Ashish");
+
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(getToday());
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    const [membersResult, expensesResult] = await Promise.all([
+      supabase
+        .from("trip_members")
+        .select("id, display_name")
+        .eq("trip_id", TRIP_ID),
+
+      supabase
+        .from("expenses")
+        .select(
+          "id, trip_id, paid_by_member_id, description, amount, expense_date, created_at"
+        )
+        .eq("trip_id", TRIP_ID)
+        .order("expense_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (membersResult.error) {
+      throw membersResult.error;
+    }
+
+    if (expensesResult.error) {
+      throw expensesResult.error;
+    }
+
+    const loadedMembers = (membersResult.data ?? []) as Member[];
+    const loadedExpenses = (expensesResult.data ?? []) as Expense[];
+
+    setMembers(loadedMembers);
+    setExpenses(loadedExpenses);
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
-  }, [expenses]);
+    let active = true;
+
+    async function initialise() {
+      try {
+        await loadData();
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load trip expenses."
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void initialise();
+
+    const channel = supabase
+      .channel("shared-trip-expenses")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "expenses",
+          filter: `trip_id=eq.${TRIP_ID}`,
+        },
+        () => {
+          void loadData().catch((err: unknown) => {
+            if (active) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Unable to refresh expenses."
+              );
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    // Fallback refresh in case realtime is temporarily unavailable.
+    const refreshInterval = window.setInterval(() => {
+      void loadData().catch(() => undefined);
+    }, 15000);
+
+    return () => {
+      active = false;
+      window.clearInterval(refreshInterval);
+      void supabase.removeChannel(channel);
+    };
+  }, [loadData]);
+
+  const memberByName = useMemo(
+    () => new Map(members.map((member) => [member.display_name, member])),
+    [members]
+  );
+
+  const memberById = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members]
+  );
 
   const totalPaid = useMemo(
     () =>
       expenses.reduce(
-        (sum, expense) => sum + Math.round(expense.amount * 100),
+        (sum, expense) => sum + Math.round(Number(expense.amount) * 100),
         0
       ),
     [expenses]
@@ -71,34 +177,38 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
   const summary = useMemo(() => {
     const result = PEOPLE.map((person) => ({
       person,
-      paid: expenses
-        .filter((expense) => expense.paidBy === person)
-        .reduce(
-          (sum, expense) => sum + Math.round(expense.amount * 100),
-          0
-        ),
+      paid: 0,
       share: 0,
+      balance: 0,
     }));
 
     expenses.forEach((expense, expenseIndex) => {
-      const paise = Math.round(expense.amount * 100);
+      const paise = Math.round(Number(expense.amount) * 100);
+      const payer = memberById.get(expense.paid_by_member_id);
+
+      const payerRow = result.find(
+        (row) => row.person === payer?.display_name
+      );
+
+      if (payerRow) payerRow.paid += paise;
+
       const baseShare = Math.floor(paise / 3);
       const remainder = paise % 3;
 
-      result.forEach((person, index) => {
-        person.share += baseShare;
+      result.forEach((row, index) => {
+        row.share += baseShare;
 
         if ((index - (expenseIndex % 3) + 3) % 3 < remainder) {
-          person.share += 1;
+          row.share += 1;
         }
       });
     });
 
-    return result.map((person) => ({
-      ...person,
-      balance: person.paid - person.share,
+    return result.map((row) => ({
+      ...row,
+      balance: row.paid - row.share,
     }));
-  }, [expenses]);
+  }, [expenses, memberById]);
 
   const settlements = useMemo(() => {
     const creditors = summary
@@ -148,42 +258,133 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
     return transfers;
   }, [summary]);
 
-  function addExpense(event: React.FormEvent<HTMLFormElement>) {
+  const personExpenses = useMemo(() => {
+    const selectedMember = memberByName.get(activePerson);
+
+    if (!selectedMember) return [];
+
+    return expenses.filter(
+      (expense) => expense.paid_by_member_id === selectedMember.id
+    );
+  }, [expenses, activePerson, memberByName]);
+
+  function resetForm() {
+    setDescription("");
+    setAmount("");
+    setDate(getToday());
+    setEditingId(null);
+  }
+
+  async function saveExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
 
     const parsedAmount = Number(amount);
+    const selectedMember = memberByName.get(activePerson);
+
+    if (!selectedMember) {
+      setError("Traveller details are missing. Please refresh the page.");
+      return;
+    }
 
     if (
       !description.trim() ||
       !Number.isFinite(parsedAmount) ||
-      parsedAmount <= 0
+      parsedAmount <= 0 ||
+      !date
     ) {
+      setError("Please enter a valid description, amount and date.");
       return;
     }
 
-    const newExpense: Expense = {
-      id: Date.now(),
-      paidBy: activePerson,
+    setSaving(true);
+
+    const expenseData = {
+      trip_id: TRIP_ID,
+      paid_by_member_id: selectedMember.id,
       description: description.trim(),
       amount: Math.round(parsedAmount * 100) / 100,
-      date,
+      expense_date: date,
+      created_by: null,
     };
 
-    setExpenses((current) => [newExpense, ...current]);
-    setDescription("");
-    setAmount("");
-    setDate(getToday());
+    try {
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from("expenses")
+          .update({
+            paid_by_member_id: expenseData.paid_by_member_id,
+            description: expenseData.description,
+            amount: expenseData.amount,
+            expense_date: expenseData.expense_date,
+          })
+          .eq("id", editingId)
+          .eq("trip_id", TRIP_ID);
+
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from("expenses")
+          .insert(expenseData);
+
+        if (insertError) throw insertError;
+      }
+
+      resetForm();
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to save expense."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function deleteExpense(id: number) {
-    setExpenses((current) =>
-      current.filter((expense) => expense.id !== id)
+  function startEditing(expense: Expense) {
+    const payer = memberById.get(expense.paid_by_member_id);
+
+    if (!payer) return;
+
+    setActivePerson(payer.display_name);
+    setDescription(expense.description);
+    setAmount(String(expense.amount));
+    setDate(expense.expense_date);
+    setEditingId(expense.id);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteExpense(id: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this expense?"
     );
-  }
 
-  const personExpenses = expenses.filter(
-    (expense) => expense.paidBy === activePerson
-  );
+    if (!confirmed) return;
+
+    setError("");
+
+    const { error: deleteError } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("id", id)
+      .eq("trip_id", TRIP_ID);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    if (editingId === id) resetForm();
+
+    try {
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to refresh expenses."
+      );
+    }
+  }
 
   return (
     <main className="app-container expenses-page">
@@ -204,6 +405,15 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           <Wallet size={20} />
         </div>
       </header>
+
+      {error && (
+        <div className="expense-error" role="alert">
+          {error}
+          <button type="button" onClick={() => setError("")}>
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       <section className="expense-total-card">
         <div className="expense-total-icon">
@@ -237,47 +447,78 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           ))}
         </div>
 
-        <form className="expense-form" onSubmit={addExpense}>
-          <label htmlFor="expense-description">
-            Expense description
-          </label>
-          <input
-            id="expense-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="e.g. Dinner, Hotel, Petrol"
-            required
-          />
-
-          <label htmlFor="expense-amount">Amount (₹)</label>
-          <div className="expense-amount-input">
-            <IndianRupee size={17} />
+        {loading ? (
+          <div className="expense-empty">
+            <RefreshCw size={24} />
+            <p>Loading shared expenses...</p>
+          </div>
+        ) : (
+          <form className="expense-form" onSubmit={saveExpense}>
+            <label htmlFor="expense-description">
+              Expense description
+            </label>
             <input
-              id="expense-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="Enter amount"
+              id="expense-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="e.g. Dinner, Hotel, Petrol"
               required
             />
-          </div>
 
-          <label htmlFor="expense-date">Date</label>
-          <input
-            id="expense-date"
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            required
-          />
+            <label htmlFor="expense-amount">Amount (₹)</label>
+            <div className="expense-amount-input">
+              <IndianRupee size={17} />
+              <input
+                id="expense-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="Enter amount"
+                required
+              />
+            </div>
 
-          <button className="expense-add-button" type="submit">
-            <Plus size={18} />
-            Add expense for {activePerson}
-          </button>
-        </form>
+            <label htmlFor="expense-date">Date</label>
+            <input
+              id="expense-date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              required
+            />
+
+            <button
+              className="expense-add-button"
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? (
+                <RefreshCw size={17} />
+              ) : editingId ? (
+                <Pencil size={17} />
+              ) : (
+                <Plus size={18} />
+              )}
+              {saving
+                ? "Saving..."
+                : editingId
+                  ? "Update expense"
+                  : `Add expense for ${activePerson}`}
+            </button>
+
+            {editingId && (
+              <button
+                className="expense-cancel-button"
+                type="button"
+                onClick={resetForm}
+              >
+                Cancel editing
+              </button>
+            )}
+          </form>
+        )}
       </section>
 
       <section className="section">
@@ -289,7 +530,12 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           <Receipt size={21} />
         </div>
 
-        {personExpenses.length === 0 ? (
+        {loading ? (
+          <div className="expense-empty">
+            <RefreshCw size={24} />
+            <p>Loading...</p>
+          </div>
+        ) : personExpenses.length === 0 ? (
           <div className="expense-empty">
             <Receipt size={28} />
             <p>No expenses recorded yet.</p>
@@ -305,22 +551,37 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
 
                 <div className="expense-entry-details">
                   <strong>{expense.description}</strong>
-                  <span>{expense.date}</span>
-                  <small>Paid by {expense.paidBy}</small>
+                  <span>{expense.expense_date}</span>
+                  <small>
+                    Paid by{" "}
+                    {memberById.get(expense.paid_by_member_id)?.display_name}
+                  </small>
                 </div>
 
                 <div className="expense-entry-right">
                   <strong>
-                    {formatMoney(Math.round(expense.amount * 100))}
+                    {formatMoney(Math.round(Number(expense.amount) * 100))}
                   </strong>
-                  <button
-                    className="expense-delete-button"
-                    onClick={() => deleteExpense(expense.id)}
-                    aria-label={`Delete ${expense.description}`}
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+
+                  <div className="expense-actions">
+                    <button
+                      className="expense-edit-button"
+                      onClick={() => startEditing(expense)}
+                      aria-label={`Edit ${expense.description}`}
+                      type="button"
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    <button
+                      className="expense-delete-button"
+                      onClick={() => void deleteExpense(expense.id)}
+                      aria-label={`Delete ${expense.description}`}
+                      type="button"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -343,10 +604,7 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
 
         <div className="expense-summary-list">
           {summary.map((person) => (
-            <div
-              className="expense-summary-person"
-              key={person.person}
-            >
+            <div className="expense-summary-person" key={person.person}>
               <strong>{person.person}</strong>
 
               <div>
@@ -549,6 +807,22 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           cursor: pointer;
         }
 
+        .expense-add-button:disabled {
+          opacity: .6;
+          cursor: wait;
+        }
+
+        .expense-cancel-button {
+          border: 1px solid var(--border);
+          border-radius: 11px;
+          background: #fff;
+          color: var(--muted);
+          padding: 11px;
+          font-family: inherit;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
         .expense-empty {
           background: #fafaf7;
           border: 1px dashed var(--border);
@@ -623,18 +897,32 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
           gap: 8px;
         }
 
-        .expense-entry-right strong {
+        .expense-entry-right > strong {
           font-size: 13px;
           color: var(--text);
           white-space: nowrap;
         }
 
+        .expense-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .expense-edit-button,
         .expense-delete-button {
           border: none;
           background: transparent;
-          color: #a36c63;
           padding: 4px;
           cursor: pointer;
+        }
+
+        .expense-edit-button {
+          color: var(--green);
+        }
+
+        .expense-delete-button {
+          color: #a36c63;
         }
 
         .expense-summary-note {
@@ -732,6 +1020,28 @@ function ExpensesPage({ onBack }: { onBack: () => void }) {
         .settlement-arrow {
           color: var(--green);
           font-weight: 700;
+        }
+
+        .expense-error {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          margin: 15px 0;
+          padding: 12px;
+          border-radius: 12px;
+          background: #fff0ed;
+          color: #a33f32;
+          font-size: 12px;
+          overflow-wrap: anywhere;
+        }
+
+        .expense-error button {
+          flex-shrink: 0;
+          border: none;
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
         }
       `}</style>
     </main>
